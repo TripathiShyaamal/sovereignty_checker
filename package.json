@@ -1,0 +1,37 @@
+{
+  "name": "iomete-data-sovereignty-checker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A clean, fully client-side web app that helps companies understand their data sovereignty risk based on six inputs.",
+  "homepage": ".",
+  "dependencies": {
+    "html2canvas": "^1.4.1",
+    "lucide-react": "^0.507.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-scripts": "5.0.1"
+  },
+  "scripts": {
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@craco/craco": "^7.1.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17"
+  }
+}

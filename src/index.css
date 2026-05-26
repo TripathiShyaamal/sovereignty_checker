@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    background-color: #f2eeeb;
+}
+
+body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        sans-serif;
+    font-weight: 400;
+    color: #202020;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+.font-archivo {
+    font-family: "Archivo", sans-serif;
+    font-weight: 400;
+}
+
+.font-inter {
+    font-family: "Inter", sans-serif;
+}
+
+.font-mono-dm {
+    font-family: "DM Mono", monospace;
+    font-weight: 400;
+}
+
+/* Smooth screen transitions */
+.screen-enter {
+    opacity: 0;
+    transform: translateY(8px);
+}
+
+.screen-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+        opacity 320ms ease,
+        transform 320ms ease;
+}
+
+/* Native select reset to allow custom styling */
+select.ds-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23626261' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 12px;
+    padding-right: 36px;
+}
+
+select.ds-select:focus {
+    outline: none;
+    border-color: #2d382d;
+}
+
+input.ds-input:focus {
+    outline: none;
+    border-color: #2d382d;
+}
+
+/* Remove default focus rings, add subtle one */
+button:focus {
+    outline: none;
+}
+
+button:focus-visible {
+    outline: 1px solid #2d382d;
+    outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+    background: #2d382d;
+    color: #ffffff;
+}
