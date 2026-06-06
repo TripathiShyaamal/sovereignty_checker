@@ -631,7 +631,9 @@ function ResultScreen({
         </div>
 
         {/* Email capture — appears for High and Moderate only */}
-        {(risk === "high" || risk === "moderate") && <EmailCapture />}
+        {(risk === "high" || risk === "moderate") && (
+          <EmailCapture result={result} />
+        )}
 
         {/* Shareable result card — always shown */}
         <ShareYourResult insight={result.headlineInsight} meta={meta} />
@@ -766,19 +768,44 @@ function ChecklistSection({ items }) {
 /* -------------------------------------------------------------------------- */
 /* Email capture                                                              */
 /* -------------------------------------------------------------------------- */
-function EmailCapture() {
+function EmailCapture({ result }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
     if (!valid) {
       setError("Please enter a valid email address");
       return;
     }
+
+    if (sending) return;
+
     setError("");
-    setSent(true);
+    setSending(true);
+
+    try {
+      const response = await fetch("/.netlify/functions/send-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), result }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to send your report");
+      }
+
+      setSent(true);
+    } catch (sendError) {
+      setError(
+        sendError.message || "Unable to send your report. Please try again.",
+      );
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -805,6 +832,7 @@ function EmailCapture() {
             <input
               type="email"
               value={email}
+              disabled={sending}
               onChange={(e) => {
                 setEmail(e.target.value);
                 if (error) setError("");
@@ -823,6 +851,7 @@ function EmailCapture() {
             <button
               type="button"
               onClick={handleSend}
+              disabled={sending}
               className="font-inter w-full rounded-md text-[14px] transition-colors sm:w-auto"
               style={{
                 backgroundColor: C.primary,
@@ -830,11 +859,12 @@ function EmailCapture() {
                 border: `1px solid ${C.primary}`,
                 padding: "11px 22px",
                 fontWeight: 500,
-                cursor: "pointer",
+                cursor: sending ? "not-allowed" : "pointer",
+                opacity: sending ? 0.65 : 1,
               }}
               data-testid="email-send-button"
             >
-              Send Report
+              {sending ? "Sending..." : "Send Report"}
             </button>
           </div>
           {error && (

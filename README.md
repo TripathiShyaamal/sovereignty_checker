@@ -22,7 +22,8 @@ iomete-data-sovereignty-checker/
 ├── postcss.config.js
 ├── netlify/
 │   └── functions/
-│       └── generate-result.js       # generates result copy with OpenAI
+│       ├── generate-result.js       # generates result copy with OpenAI
+│       └── send-report.js           # emails the full report with Resend
 ├── .gitignore
 ├── public/
 │   └── index.html           # loads Google Fonts + mounts React
@@ -67,8 +68,11 @@ This produces the static `build/` folder used by the Netlify deployment.
 
 ## Netlify configuration
 
-Set `OPENAI_API_KEY` in the Netlify site's environment variables. The result
-generator is available at `/.netlify/functions/generate-result`.
+Set `OPENAI_API_KEY` and `RESEND_API_KEY` in the Netlify site's environment
+variables. Set `RESEND_FROM_EMAIL` to an address on a verified Resend domain;
+otherwise the email function uses Resend's onboarding sender. The result
+generator is available at `/.netlify/functions/generate-result`, and report
+emails are sent through `/.netlify/functions/send-report`.
 
 ## Run the pre-built version (no installation required)
 
