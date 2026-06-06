@@ -9,11 +9,6 @@ import {
   SOVEREIGNTY_DISCUSSION,
   assessRisk,
   RISK_META,
-  generateWhyText,
-  generateRecommendationText,
-  generateShareText,
-  generateHeadlineInsight,
-  generateChecklist,
 } from "@/lib/sovereigntyLogic";
 
 // Exact hex colors from spec
@@ -44,6 +39,9 @@ export default function SovereigntyChecker() {
   const [form, setForm] = useState(initialForm);
   const [screen, setScreen] = useState("form"); // "form" | "result"
   const [copied, setCopied] = useState(false);
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const allFilled = useMemo(
     () => Object.values(form).every((v) => v && v.length > 0),
@@ -52,16 +50,49 @@ export default function SovereigntyChecker() {
 
   const update = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
 
-  const handleSubmit = () => {
-    if (!allFilled) return;
+  const handleSubmit = async () => {
+    if (!allFilled || loading) return;
+
+    setLoading(true);
+    setSubmitError("");
     setCopied(false);
-    setScreen("result");
-    // ensure page top on result
-    if (typeof window !== "undefined") window.scrollTo({ top: 0 });
+
+    try {
+      const response = await fetch("/.netlify/functions/generate-result", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          industry: form.industry,
+          companySize: form.companySize,
+          dataLocation: form.dataLocation,
+          jurisdictions: form.multiJurisdiction,
+          priority: form.priority,
+          sovereigntyDiscussion: form.sovereigntyDiscussion,
+          riskLevel: assessRisk(form),
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to generate your result");
+      }
+
+      setResult(data);
+      setScreen("result");
+      if (typeof window !== "undefined") window.scrollTo({ top: 0 });
+    } catch (error) {
+      setSubmitError(
+        error.message || "Unable to generate your result. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleReset = () => {
     setForm(initialForm);
+    setResult(null);
+    setSubmitError("");
     setCopied(false);
     setScreen("form");
     if (typeof window !== "undefined") window.scrollTo({ top: 0 });
@@ -87,10 +118,13 @@ export default function SovereigntyChecker() {
           update={update}
           allFilled={allFilled}
           onSubmit={handleSubmit}
+          loading={loading}
+          submitError={submitError}
         />
       ) : (
         <ResultScreen
           form={form}
+          result={result}
           copied={copied}
           setCopied={setCopied}
           onReset={handleReset}
@@ -132,7 +166,7 @@ function Header() {
 /* -------------------------------------------------------------------------- */
 /* Form Screen                                                                */
 /* -------------------------------------------------------------------------- */
-function FormScreen({ form, update, allFilled, onSubmit }) {
+function FormScreen({ form, update, allFilled, onSubmit, loading, submitError }) {
   return (
     <div className="screen-enter screen-enter-active" data-testid="form-screen">
       {/* Full-width dark title block */}
@@ -270,20 +304,30 @@ function FormScreen({ form, update, allFilled, onSubmit }) {
           <button
             type="button"
             onClick={onSubmit}
-            disabled={!allFilled}
+            disabled={!allFilled || loading}
             data-testid="check-risk-button"
             className="font-archivo mt-7 inline-flex w-full items-center justify-center rounded-md text-base transition-colors"
             style={{
               backgroundColor: C.primary,
               color: C.accent,
-              opacity: allFilled ? 1 : 0.4,
-              cursor: allFilled ? "pointer" : "not-allowed",
+              opacity: allFilled && !loading ? 1 : 0.4,
+              cursor: allFilled && !loading ? "pointer" : "not-allowed",
               letterSpacing: "0.005em",
               padding: "16px 24px",
             }}
           >
-            Check My Risk
+            {loading ? "Generating Your Result..." : "Check My Risk"}
           </button>
+          {submitError && (
+            <p
+              className="font-inter mt-3 text-center text-[13px]"
+              style={{ color: "#ED7E68" }}
+              role="alert"
+              data-testid="submit-error"
+            >
+              {submitError}
+            </p>
+          )}
         </div>
 
         <p
@@ -291,7 +335,8 @@ function FormScreen({ form, update, allFilled, onSubmit }) {
           style={{ color: C.secondaryText }}
           data-testid="form-footer-note"
         >
-          Your answers stay in your browser. Nothing is sent or stored.
+          Your answers are securely sent to generate this result and are not
+          stored by this app.
         </p>
       </div>
     </div>
@@ -391,18 +436,19 @@ function ButtonGroup({ value, onChange, options, testIdPrefix }) {
 /* -------------------------------------------------------------------------- */
 /* Result Screen                                                              */
 /* -------------------------------------------------------------------------- */
-function ResultScreen({ form, copied, setCopied, onReset, onBackToForm }) {
+function ResultScreen({
+  form,
+  result,
+  copied,
+  setCopied,
+  onReset,
+  onBackToForm,
+}) {
   const risk = useMemo(() => assessRisk(form), [form]);
   const meta = RISK_META[risk];
-  const whyText = useMemo(() => generateWhyText(form, risk), [form, risk]);
-  const recText = useMemo(
-    () => generateRecommendationText(form, risk),
-    [form, risk],
-  );
-  const shareText = useMemo(
-    () => generateShareText(form, risk),
-    [form, risk],
-  );
+  const whyText = result.whyYouGotThisResult;
+  const recText = result.whatInfrastructureLooksLike;
+  const shareText = result.shareMessage;
 
   const handleCopy = async () => {
     try {
@@ -526,7 +572,7 @@ function ResultScreen({ form, copied, setCopied, onReset, onBackToForm }) {
         `}</style>
 
         {/* What To Do Next — input-specific actionable checklist */}
-        <ChecklistSection inputs={form} risk={risk} />
+        <ChecklistSection items={result.checklist} />
 
         {/* Share box */}
         <div
@@ -588,7 +634,7 @@ function ResultScreen({ form, copied, setCopied, onReset, onBackToForm }) {
         {(risk === "high" || risk === "moderate") && <EmailCapture />}
 
         {/* Shareable result card — always shown */}
-        <ShareYourResult inputs={form} risk={risk} meta={meta} />
+        <ShareYourResult insight={result.headlineInsight} meta={meta} />
 
         {/* Learn more link + Start Over */}
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
@@ -630,11 +676,7 @@ function ResultScreen({ form, copied, setCopied, onReset, onBackToForm }) {
 /* -------------------------------------------------------------------------- */
 /* Checklist — "What To Do Next" with input-specific items                    */
 /* -------------------------------------------------------------------------- */
-function ChecklistSection({ inputs, risk }) {
-  const items = useMemo(
-    () => generateChecklist(inputs, risk),
-    [inputs, risk],
-  );
+function ChecklistSection({ items }) {
   const [checked, setChecked] = useState(() => new Set());
 
   const toggle = (i) =>
@@ -813,12 +855,8 @@ function EmailCapture() {
 /* -------------------------------------------------------------------------- */
 /* Shareable result card                                                      */
 /* -------------------------------------------------------------------------- */
-function ShareYourResult({ inputs, risk, meta }) {
+function ShareYourResult({ insight, meta }) {
   const cardRef = useRef(null);
-  const insight = useMemo(
-    () => generateHeadlineInsight(inputs, risk),
-    [inputs, risk],
-  );
   const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async () => {

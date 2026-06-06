@@ -1,9 +1,9 @@
 # IOMETE — Data Sovereignty Checker
 
-A clean, fully client-side web app that helps companies understand their data
-sovereignty risk based on six inputs and guides them toward the right
-infrastructure approach. No backend, no database, no third-party APIs at
-runtime — all logic and the knowledge base are embedded in the client.
+A clean web app that helps companies understand their data sovereignty risk
+based on six inputs and guides them toward the right infrastructure approach.
+Risk scoring runs in the client, while a Netlify function uses OpenAI to
+generate the result content.
 
 The app is built with React 19, Tailwind CSS (used selectively), and uses
 `html2canvas` for the "Download Card" feature. It uses Google Fonts CDN to load
@@ -20,6 +20,9 @@ iomete-data-sovereignty-checker/
 ├── jsconfig.json            # IDE awareness of "@/" alias
 ├── tailwind.config.js
 ├── postcss.config.js
+├── netlify/
+│   └── functions/
+│       └── generate-result.js       # generates result copy with OpenAI
 ├── .gitignore
 ├── public/
 │   └── index.html           # loads Google Fonts + mounts React
@@ -33,9 +36,7 @@ iomete-data-sovereignty-checker/
 │   │                                # checklist, email capture, share card,
 │   │                                # book CTA
 │   └── lib/
-│       └── sovereigntyLogic.js      # risk assessment + all dynamic copy
-│                                    # generators (why, recommendation,
-│                                    # share, headline, checklist)
+│       └── sovereigntyLogic.js      # risk assessment + local reference copy
 └── build/                   # production build, already compiled
     └── index.html
 ```
@@ -62,8 +63,12 @@ npm start
 yarn build
 ```
 
-This produces a static `build/` folder you can deploy to any static host (S3,
-Vercel, Netlify, GitHub Pages, an Nginx box, etc.).
+This produces the static `build/` folder used by the Netlify deployment.
+
+## Netlify configuration
+
+Set `OPENAI_API_KEY` in the Netlify site's environment variables. The result
+generator is available at `/.netlify/functions/generate-result`.
 
 ## Run the pre-built version (no installation required)
 
@@ -94,7 +99,10 @@ page, fall back to Option A.
 2. `assessRisk()` in `src/lib/sovereigntyLogic.js` classifies the user into
    **High**, **Moderate**, or **Low Sovereignty Exposure** using the rules in
    the original product spec.
-3. The result screen renders:
+3. The form sends the answers and risk level to the `generate-result` Netlify
+   function, which uses `gpt-4o-mini` and a data sovereignty knowledge base to
+   generate structured result content.
+4. The result screen renders:
    - a full-width risk header (Racing-900 background, FLUORO-400 label),
    - a static three-zone risk indicator with a vertical marker positioned at
      28% / 58% / 92% of the bar depending on the risk level,
